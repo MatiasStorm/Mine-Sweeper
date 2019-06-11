@@ -3,6 +3,8 @@ from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QMainWindow, QWid
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import QTime, QTimer, QObject, Qt, QSize
 import random
+from Settings import *
+import numpy as np
 
 
 class Field(QPushButton):
@@ -42,84 +44,91 @@ class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.timerRunning = False
+        self.load_images()
+        
 
         self.setWindowTitle("Mine Sweeper")
-        self.setWindowIcon(MINE_ICON)
+        self.setWindowIcon(self.mine_icon)
         self.centralWidget = QWidget()
         self.setCentralWidget(self.centralWidget)
         self.masterLayout = QVBoxLayout(self.centralWidget)
 
-        # Top buttons/widgets:
+        # Top fields/widgets:
         topLayout = QHBoxLayout()
         topLayout.setSpacing(100)
 
         #Time label:
-        self.timeLabel = QLabel("0.0 Secounds")
-        self.timeLabel.setStyleSheet("font: bold 18px")
+        self.time_label = QLabel("0.0 Secounds")
+        self.time_label.setStyleSheet("font: bold 18px")
         self.time = QTime(0, 0, 0)
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_timer)
 
-        #Start button and flag label
-        self.startButton = QPushButton()
-        self.startButton.setFixedSize(45,45)
-        self.startButton.setStyleSheet("QPushButton {background-color: white}")
-        self.startButton.setIcon(QIcon("Happy_smiley.png"))
-        self.startButton.setIconSize(QSize(45,45))
-        self.startButton.clicked.connect(self.new_game)
-        self.total_mines = 0
+        #Start field and flag label
+        self.start_button = QPushButton()
+        self.start_button.setFixedSize(45,45)
+        self.start_button.setStyleSheet("QPushfield {background-color: white}")
+        self.start_button.setIcon(self.happy_smiley_icon)
+        self.start_button.setIconSize(QSize(45,45))
+        self.start_button.clicked.connect(self.new_game)
+        self.total_mines = BOMBS
         self.total_flags = 0
-        self.flagLabel = QLabel()
-        self.flagLabel.setStyleSheet("font: bold 18px")
+        self.flag_label = QLabel()
+        self.flag_label.setStyleSheet("font: bold 18px")
 
-        topLayout.addWidget(self.timeLabel)
-        topLayout.addWidget(self.startButton)
-        topLayout.addWidget(self.flagLabel)
+        topLayout.addWidget(self.time_label)
+        topLayout.addWidget(self.start_button)
+        topLayout.addWidget(self.flag_label)
         
         self.masterLayout.addLayout(topLayout)
 
-        #Button layout
-        self.buttons = []
-        self.buttonlayout = QGridLayout()
-        self.buttonlayout.setSpacing(0)
+        #field layout
+        self.fields = []
+        self.fieldlayout = QGridLayout()
+        self.fieldlayout.setSpacing(0)
 
-        self.masterLayout.addLayout(self.buttonlayout)
+        self.masterLayout.addLayout(self.fieldlayout)
         self.centralWidget.setLayout(self.masterLayout)
 
-        #Building the buttons:
-        self.buttons = []
-        for r in range(15):
+        #Building the fields:
+        self.fields = []
+        for r in range(FIELD_ROWS):
             row = []
-            for c in range(15):
+            for c in range(FIELD_COLS):
                 b = Field(r, c)
                 b.setFixedSize(32, 32)
                 row.append(b)
-                b.clicked.connect(self.button_clicked)
+                b.clicked.connect(self.field_clicked)
                 b.setContextMenuPolicy(Qt.CustomContextMenu)
                 b.customContextMenuRequested.connect(self.right_click)
-                self.buttonlayout.addWidget(b, r, c)
-            self.buttons.append(row)
+                self.fieldlayout.addWidget(b, r, c)
+            self.fields.append(row)
 
         self.place_mines()
 
+    def load_images(self):
+        self.happy_smiley_icon = QIcon(HAPPY_SMILEY_IMG)
+        self.mine_icon = QIcon(MINE_IMG)
+        self.sad_smiley_icon = QIcon(HAPPY_SMILEY_IMG)
+        self.flag_with_cross_icon = QIcon(FLAG_WITH_CROSS_IMG)
+        self.flag_icon = QIcon(FLAG_IMG)
+
     def new_game(self):
         """
-        Resets all buttons, flagLabel, timer and startButton
-        :return:
+            Resets all fields, flag_label, timer and start_button
         """
-        self.startButton.setIcon(QIcon("Happy_smiley.png"))
+        self.start_button.setIcon(self.happy_smiley_icon)
         self.total_flags = 0
-        self.total_mines = 0
-        self.update_flagLabel()
+        self.total_mines = BOMBS
+        self.update_flag_label()
     
         self.time.currentTime()
-        self.timer.dumpObjectInfo()
         self.timer.stop()
         self.timerRunning = False
-        self.timeLabel.setText("0.0 Secounds")
+        self.time_label.setText("0.0 Secounds")
     
-        # Resetting buttons:
-        for row in self.buttons:
+        # Resetting fields:
+        for row in self.fields:
             for b in row:
                 b.set_isMine(False)
                 b.set_flag(False)
@@ -133,85 +142,84 @@ class MainWindow(QMainWindow):
     
     def place_mines(self):
         """
-        Place mines, at random depending on the BOMB_RATIO
-        :return:
+            Place mines, at random depending
         """
-        for i in range(2):
-            if i == 0:
-                for r in self.buttons:
-                    for b in r:
-                        if random.random() < BOMB_RATIO:
-                            b.set_isMine(True)
-                            self.total_mines += 1
-            else:
-                for r in self.buttons:
-                    for b in r:
-                        self.count_mines(b)
-        self.update_flagLabel()
+        # Creating a 1D array of 
+        fields1d = []
+        for row in self.fields:
+            fields1d.extend(row)
+        random.shuffle(fields1d)
+        
+        i = j = 0
+        for i in range(self.total_mines):
+            fields1d[i].set_isMine(True)
+            i += 1;
+            if i >= len(self.fields) - 1:
+                i = 0;
+                j += 1;
+        
+        for r in self.fields:
+            for b in r:
+                self.count_mines(b)
+        self.update_flag_label()
     
-    def count_mines(self, button):
+    def count_mines(self, field):
         """
-        Counting nearby mines of every Field, and adds the number to the Field function set_mine_count.
-        :param button: A button in the game, from the class Field.
-        :return:
+            Counting nearby mines of every Field, and adds the number to the Field's mine_count.
+            :param field: class Field.
         """
-        row = button.get_row()
-        col = button.get_col()
+        row = field.get_row()
+        col = field.get_col()
         mine_count = 0
-        button = self.buttons[row][col]
+        field = self.fields[row][col]
         for r in range(row - 1, row + 2):
             for c in range(col - 1, col + 2):
                 if r >= 0 and c >=0:
                     try:
-                        temp = self.buttons[r][c]
+                        temp = self.fields[r][c]
                         if temp.get_isMine():
                             mine_count += 1
                     except IndexError:
                         None
-        button.set_mine_count(mine_count)
-        return
+        field.set_mine_count(mine_count)
     
-    def button_clicked(self):
+    def field_clicked(self):
         """
-        If a button is clicked, timer starts running, if button is a mine game ends, else CSB is called.
-        :return:
+            If a field is clicked, timer starts running, if field is a mine game ends, else CSF is called.
         """
-        button = self.sender()
+        field = self.sender()
         if not self.timerRunning:
             self.time.start()
             self.timer.start(100)
             self.timerRunning = True
             # self.update_timer()
     
-        if not button.get_flag():
-            button.setFlat(True)
-            button.setEnabled(False)
+        if not field.get_flag():
+            field.setFlat(True)
+            field.setEnabled(False)
     
-            if button.get_isMine():
-                button.setIcon(MINE_ICON)
+            if field.get_isMine():
+                field.setIcon(self.mine_icon)
                 self.end_game("loose")
             else:
-                self.CSB(button)
-            return
-        return
+                self.CSF(field)
     
-    def CSB(self, button):
+    def CSF(self, field):
         """
-        Checks all the surroudning buttons mine_count value, and sets their text as that number.
-        :param button: Button from the call Field.
-        :return:
+            Checks all the surroudning fields mine_count value, and sets their text as that number.
+            :param field: field from the call Field.
         """
-        if button.get_mine_count() != 0:
-            button.setText(str(button.get_mine_count()))
-        row = button.get_row()
-        col = button.get_col()
+        if field.get_mine_count() != 0:
+            field.setText(str(field.get_mine_count()))
+        row = field.get_row()
+        col = field.get_col()
         for r in range(row - 1, row + 2):
             for c in range(col - 1, col + 2):
                 if c >= 0 and r >= 0:
                     try:
-                        temp = self.buttons[r][c]
+                        temp = self.fields[r][c]
                         if not temp.get_flag() and not temp.get_isMine():
-                            self.set_button_stylesheet(temp)
+                            self.set_field_stylesheet(temp)
                             if temp.isEnabled():
                                 if temp.get_mine_count() != 0:
                                     temp.setEnabled(False)
@@ -221,42 +229,39 @@ class MainWindow(QMainWindow):
                                 elif temp.get_mine_count() == 0:
                                     temp.setEnabled(False)
                                     temp.setFlat(True)
-                                    self.CSB(temp)
+                                    self.CSF(temp)
                     except IndexError:
                         None
-        return
     
     def right_click(self):
         """
-        If button has flag, removes flag, else places flag.
-        Checks if all mines have been flagged, if ture calls end_game().
-        :return:
+            If field has flag, removes flag, else places flag.
+            Checks if all mines have been flagged, if ture calls end_game().
         """
-        button = self.sender()
-        if not button.get_flag():
-            button.setFlat(True)
-            button.setIcon(QIcon("flag.png"))
-            button.set_flag(True)
-            self.set_button_stylesheet(button)
+        field = self.sender()
+        if not field.get_flag():
+            field.setFlat(True)
+            field.setIcon(self.flag_icon)
+            field.set_flag(True)
+            self.set_field_stylesheet(field)
             self.total_flags += 1
-            self.update_flagLabel()
+            self.update_flag_label()
         else:
-            button.setFlat(False)
-            button.setIcon(QIcon())
-            button.set_flag(False)
-            button.setStyleSheet("")
+            field.setFlat(False)
+            field.setIcon(QIcon())
+            field.set_flag(False)
+            field.setStyleSheet("")
             self.total_flags -= 1
-            self.update_flagLabel()
+            self.update_flag_label()
         if self.is_game_over():
             self.add_score_to_file()
             self.end_game("win")
     
     def is_game_over(self):
         """
-        Checks if all mines have been flagged
-        :return:
+            Checks if all mines have been flagged
         """
-        for r in self.buttons:
+        for r in self.fields:
             for b in r:
                 if b.get_flag() and not b.get_isMine() or b.get_isMine() and not b.get_flag():
                     return False
@@ -264,29 +269,28 @@ class MainWindow(QMainWindow):
     
     def end_game(self, WL):
         """
-        Ends game by revealing all Fields, and either updating the smiley to a sad one if the game is lost or
-        opening the win_dialog if the game is won.
-        :param WL: String, "loose" if the game is lost or "win" if the game is won.
-        :return:
+            Ends game by revealing all Fields, and either updating the smiley to a sad one if the game is lost or
+            opening the win_dialog if the game is won.
+            :param WL: String, "loose" if the game is lost or "win" if the game is won.
         """
         self.timer.stop()
-        # Reveals all buttons:
-        for rows in self.buttons:
+        # Reveal all fields:
+        for rows in self.fields:
             for b in rows:
-                self.set_button_stylesheet(b)
+                self.set_field_stylesheet(b)
                 b.setEnabled(False)
                 b.setFlat(True)
                 if b.get_isMine() and not b.get_flag():
-                    b.setIcon(MINE_ICON)
+                    b.setIcon(self.mine_icon)
                 elif not b.get_isMine() and b.get_flag():
-                    b.setIcon(QIcon("flag_with_cross.png"))
+                    b.setIcon(self.flag_with_cross_icon)
                 elif not b.get_isMine() and not b.get_flag():
                     if b.get_mine_count() != 0:
                         b.setText(str(b.get_mine_count()))
     
-        # Displays sad smiley or opens win dialog if the game has been won:
+        # Display sad smiley or open win dialog if the game has been won:
         if WL == "loose":
-            self.startButton.setIcon(QIcon("Sad_smiley.jpg"))
+            self.start_button.setIcon(self.sad_smiley_icon)
         else:
             high_scores = []
             with open("High_Scores.txt", "r") as file:
@@ -294,46 +298,42 @@ class MainWindow(QMainWindow):
                     high_scores.append(line.split())
             high_scores.sort(key=lambda x: -float(x[0]))
             self.win_dialog(high_scores[0:5])
-    
-        return
+
     
     def update_timer(self):
         """
-        Updates timeLabel
+            Updates time_label
         """
         secs = self.time.elapsed() / 1000.0
-        self.timeLabel.setText(str(round(secs, 1)) + " Secounds")
+        self.time_label.setText(str(round(secs, 1)) + " Secounds")
     
-    def update_flagLabel(self):
+    def update_flag_label(self):
         """
-        Updates flagLabel, every time a flag has be placed or removed.
-        :return:
+            Updates flag_label, every time a flag has be placed or removed.
         """
-        self.flagLabel.setText(str(self.total_flags) + "/" + str(self.total_mines) + " Flags")
-        return
+        self.flag_label.setText(str(self.total_flags) + "/" + str(self.total_mines) + " Flags")
+
     
-    def set_button_stylesheet(self, button):
+    def set_field_stylesheet(self, field):
         """
-        Sets the button stylesheet depending on the mine_count value.
-        :param button:
-        :return:
+            Sets the field stylesheet depending on the mine_count value.
+            :param field:
         """
-        if button.get_mine_count() == 0 or button.get_isMine() or button.get_flag():
-            button.setStyleSheet("QPushButton {border: 1px solid; color: black}")
+        if field.get_mine_count() == 0 or field.get_isMine() or field.get_flag():
+            field.setStyleSheet("QPushButton {border: 1px solid; color: black}")
         else:
             for num, col in zip((1, 2, 3, 4, 5, 6, 7), ("blue", "green", "red", "darkblue", "darkred", "pink", "yellow")):
-                if button.mine_count == num:
-                    button.setStyleSheet("QPushButton {font: bold 20px; color: " + col + "; border: 1px solid}")
-        return
+                if field.mine_count == num:
+                    field.setStyleSheet("QPushButton {font: bold 20px; color: " + col + "; border: 1px solid}")
     
     def win_dialog(self, high_scores):
         """
-        Sets up and displays the win dialog.
-        :param high_scores: a list of lists containing the 5 highest scores.
-        :return:
+            Sets up and displays the win dialog.
+            :param high_scores: a list of lists containing the 5 highest scores.
         """
         dialog = QDialog()
-    
+        dialog.setWindowTitle("You Won!")
+        
         score_layout = QGridLayout()
         for col, text in enumerate(("Score:", "Time:", "Bombs:")):
             score_layout.addWidget(QLabel(text), 0, col)
@@ -345,11 +345,11 @@ class MainWindow(QMainWindow):
         scoreLabel.setStyleSheet("QLabel {font: Bold 13px; color: black}")
         score_layout.addWidget(scoreLabel, 6, 0)
         score_layout.addWidget(QLabel(str(self.score)), 7, 0)
-        score_layout.addWidget(QLabel(str(self.timeLabel.text()).split()[0]), 7, 1)
+        score_layout.addWidget(QLabel(str(self.time_label.text()).split()[0]), 7, 1)
         score_layout.addWidget(QLabel(str(self.total_mines)), 7, 2)
     
-        NG_btn = QPushButton("New Game")
-        exit_btn = QPushButton("Exit")
+        NG_btn = QPushfield("New Game")
+        exit_btn = QPushfield("Exit")
         NG_btn.clicked.connect(self.new_game)
         NG_btn.clicked.connect(dialog.close)
         exit_btn.clicked.connect(dialog.close)
@@ -371,15 +371,13 @@ class MainWindow(QMainWindow):
         return
 
     def add_score_to_file(self):
-        time = self.timeLabel.text().split()[0]
+        time = self.time_label.text().split()[0]
         self.score = int(self.total_mines / float(time) * 1000)
         with open("High_scores.txt", "a") as file:
             file.write(str(self.score) + " " + str(time) + " " + str(self.total_mines) + "\n")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    MINE_ICON = QIcon("Mine.png")
-    BOMB_RATIO = 0.01
 
     game = MainWindow()
     game.show()
