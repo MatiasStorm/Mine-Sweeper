@@ -142,7 +142,7 @@ class MainWindow(QMainWindow):
     
     def place_mines(self):
         """
-            Place mines, at random depending
+            Place mines, at random
         """
         # Creating a 1D array of 
         fields1d = []
@@ -317,7 +317,6 @@ class MainWindow(QMainWindow):
     def set_field_stylesheet(self, field):
         """
             Sets the field stylesheet depending on the mine_count value.
-            :param field:
         """
         if field.get_mine_count() == 0 or field.get_isMine() or field.get_flag():
             field.setStyleSheet("QPushButton {border: 1px solid; color: black}")
@@ -329,7 +328,7 @@ class MainWindow(QMainWindow):
     def win_dialog(self, high_scores):
         """
             Sets up and displays the win dialog.
-            :param high_scores: a list of lists containing the 5 highest scores.
+            :param high_scores: a list of lists containing the top 5 high scores.
         """
         dialog = QDialog()
         dialog.setWindowTitle("You Won!")
